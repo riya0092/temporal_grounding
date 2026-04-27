@@ -7,30 +7,94 @@ Built a system that automatically detects which queries need real-time data retr
 
 ## The Problem
 
-AI systems trained on fixed data face a fundamental challenge:
-- "What is Bitcoin trading at?" → Needs real-time data
-- "Who invented the printing press?" → Knowledge base sufficient
+AI models have a **timestamp problem**. They don't know:
 
-How do we automatically detect this?
+- ❌ "Is this information still accurate?"
+- ❌ "Does this query need current data?"
+- ❌ "Should I retrieve new sources?"
 
-## Solution
 
-End-to-end system combining:
-- **Temporal Marker Detection** - Detects explicit ("current", "latest") and implicit ("price", "trading") time signals
-- **Domain Volatility Taxonomy** - 6 domains with volatility scores (Finance=HIGH, History=STATIC, etc.)
-- **Adaptive Scoring** - Combines signals based on query type
+**This project solves that.**
+
+## What It Does
+
+Given any query, the system outputs:
+
+| Output | Description |
+|--------|-------------|
+| `score` | Freshness need (0.0 = stable, 1.0 = needs real-time) |
+| `action` | `retrieve_fresh` vs `use_knowledge_base` |
+| `domain` | Identified knowledge domain |
+
+## Architecture
+
+Query → Temporal Detector → Marker Score (0-1)
+      → Domain Classifier → Volatility Score (0-1)
+      → Combine (weighted by query type)
+      → Decision (retrieve vs knowledge base)
+
+
+## Temporal Marker Detection
+
+| Marker Type | Examples | Impact |
+|-------------|----------|--------|
+| Current | now, today, right | +0.4 |
+| Recent | latest, newest, most recent | +0.35 |
+| Future | will, going to, predicted | +0.2 |
+| Historical | was, ancient, invented | -0.3 |
+
+
+## Domain Volatility 
+
+| Domain | Volatility | Examples |
+|--------|------------|----------|
+| Finance | Critical (1.0) | Stocks, crypto, forex |
+| News | Critical (0.9) | Breaking news, events |
+| Technology | Medium (0.5) | Frameworks, tools |
+| Science | Low (0.4) | Theories, constants |
+| History | Static (0.0) | Historical facts |
 
 ## Results
 
+
+Performance vs Baselines:
+
+| Method | MAE | Improvement |
+|--------|-----|-------------|
+| Random (0-1) | 0.42 | baseline |
+| Keyword Only | 0.23 | +45% |
+| Full System | 0.22 | +49% |
+
+Classification Metrics:
+
 | Metric | Value |
 |--------|-------|
-| MAE (Freshness Prediction) | 0.20 |
-| R² Score | 0.51 |
-| F1 Score (Retrieval Decision) | 68% |
-| Evaluation Dataset | 60 queries |
+| Accuracy | 84% |
+| F1 Score | 90% |
+| Precision | 82% |
+| Recall | 100% |
 
-## Usage
 
+ Dataset: 38 diverse queries across 6 domains
+
+## What Works
+
+- Finance/News queries correctly identified as high freshness need
+- Historical/Static queries correctly identified as stable
+-Combining temporal markers + domain volatility outperforms either alone
+
+## Challenges
+
+- "Current CEO" type queries remain challenging (rarely changes but must be accurate)
+
+## Applications
+
+- RAG Systems - Decide when to invoke retrieval
+- Confidence Calibration - Adjust answer confidence based on freshness risk
+- Compute Optimization - Skip expensive retrieval for stable queries
+- User Transparency - Show "Based on data through [date]" disclaimers
+
+## Installation 
 ```bash
 pip install -r requirements.txt
 python temporal_grounding.py
